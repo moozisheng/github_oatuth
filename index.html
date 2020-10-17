@@ -1,0 +1,80 @@
+<html>
+
+<head>
+  <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  <!-- 引入样式 -->
+  <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+  <!-- 引入组件库 -->
+  <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+</head>
+
+<body>
+  <div id="app">
+    <div style="padding: 40px">
+      <el-button type="primary" @click='oauth()'>Login with Github</el-button>
+    </div>
+
+    <div v-if="userInfo">
+      Hello {{userInfo.name}}
+      <img :src="userInfo.avatar_url" />
+    </div>
+  </div>
+  <script>
+
+  </script>
+  <script>
+    axios.interceptors.request.use(
+      config => {
+        const token = window.localStorage.getItem("token");
+        if (token) {
+          // 判断是否存在token，如果存在的话，则每个http header都加上token
+          // Bearer是JWT的认证头部信息
+          config.headers.common["Authorization"] = "Bearer " + token;
+        }
+        return config;
+      },
+      err => {
+        return Promise.reject(err);
+      }
+    );
+
+    axios.interceptors.response.use(
+      response => {
+        app.logs.push(JSON.stringify(response.data));
+        return response;
+      },
+      err => {
+        app.logs.push(JSON.stringify(response.data));
+        return Promise.reject(err);
+      }
+    );
+    var app = new Vue({
+      el: "#app",
+      data: {
+        logs: [],
+        userInfo: null
+      },
+      methods: {
+        async oauth() {
+          window.open('/auth/github/login', '_blank')
+          const intervalId = setInterval(() => {
+            console.log("等待认证中..");
+            if (window.localStorage.getItem("authSuccess")) {
+              clearInterval(intervalId);
+              window.localStorage.removeItem("authSuccess");
+              this.getUser()
+            }
+          }, 500);
+        },
+        async getUser() {
+          const res = await axios.get("/auth/github/userinfo");
+          console.log('res:', res.data)
+          this.userInfo = res.data
+        }
+      }
+    });
+  </script>
+</body>
+
+</html>
